@@ -25,7 +25,7 @@ do
   CRAWL_JSON=$(psql $DATABASE_URL -c 'with g as (select guild.id, guild.endpoint from structs.guild where exists (select 1 from structs.guild_meta where guild.id = guild_meta.id and guild.updated_at > guild_meta.updated_at) or (endpoint is not null and not exists (select 1 from guild_meta where guild_meta.id = guild.id))) select jsonb_agg(g.*) from g;' --no-align -t)
   CRAWL_COUNT=$(echo ${CRAWL_JSON} | jq length )
 
-  for (( p=0; p<ACCOUNT_COUNT; p++ ))
+  for (( p=0; p<CRAWL_COUNT; p++ ))
   do
 
     CRAWL_GUILD_ID=$(echo CRAWL_JSON | jq -r ".[${p}].id")
