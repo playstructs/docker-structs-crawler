@@ -1,32 +1,49 @@
 #!/usr/bin/env bash
 
-STAT_SLEEP=20
+CRAWL_SLEEP=120
 
 echo "Loading The Crawler"
 
 while :
 do
   # Get latest guild updates
-  PENDING_TRANSACTION_COUNT=$(psql $DATABASE_URL -c "SELECT COUNT(1) FROM signer.tx WHERE status = 'pending';" --no-align -t)
-  echo "CRAWLER: ${PENDING_TRANSACTION_COUNT} Pending Transactions "
-  CRAWL_JSON=$(psql $DATABASE_URL -c 'select structs.GET_GUILD_UPDATES;' --no-align -t)
-  CRAWL_GUILD_ID=$(echo $STUB_ACCOUNT_JSON | jq -r '.id')
+  echo "CRAWLER ($BASHPID): ${PENDING_TRANSACTION_COUNT} Checking for updated endpoints "
 
-  if [[ ! -z "$CRAWL_JSON" ]]; then
-    if [ "$CRAWL_GUILD_ID" != "null" ]; then
-      echo $CRAWL_JSON > /var/structs/tmp/crawl_${CRAWL_GUILD_ID}.json
+  # select
+  #   to_json(guild.*)
+  # from
+  #   structs.guild
+  # where
+  #   exists (select 1 from structs.guild_meta where guild.id = guild_meta.id and guild.updated_at > guild_meta.updated_at)
+  #   or (
+  #     endpoint is not null
+  #     and not exists (select 1 from guild_meta where guild_meta.id = guild.id)
+  #   );
 
-      echo "CRAWLER ($BASHPID): Performing Crawl of ${CRAWL_GUILD_ID}"
+  # TODO Alter the above query to also grab stale meta_data rows. Maybe a day old?
 
-      # Curl endpoint
+  CRAWL_JSON=$(psql $DATABASE_URL -c 'select to_json(guild.*) from structs.guild where exists (select 1 from structs.guild_meta where guild.id = guild_meta.id and guild.updated_at > guild_meta.updated_at) or (endpoint is not null and not exists (select 1 from guild_meta where guild_meta.id = guild.id));' --no-align -t)
+  CRAWL_COUNT=$(echo ${CRAWL_JSON} | jq length )
 
-      # Update Guild
+  for (( p=0; p<ACCOUNT_COUNT; p++ ))
+  do
 
-    else
-        sleep $STAT_SLEEP
-    fi
-  else
-      sleep $STAT_SLEEP
-  fi
+    CRAWL_GUILD_ID=$(echo CRAWL_JSON | jq -r ".[${p}].id")
+    CRAWL_GUILD_ENDPOINT=$(echo CRAWL_JSON | jq -r ".[${p}].endpoint")
+    echo "CRAWLER ($BASHPID): Performing Crawl of ${CRAWL_GUILD_ID} for endpoint ${CRAWL_GUILD_ENDPOINT}"
 
+    # Curl endpoint
+    curl -o crawl_endpoint_data.json.tmp ${CRAWL_GUILD_ENDPOINT}
+
+    # validate the json
+    # Run it through jq so garbage falls away
+    CRAWL_GUILD_JSON=$( jq -f crawl_endpoint_data.json.tmp -c . )
+    rm crawl_endpoint_data.json.tmp
+
+    # Update Guild
+    psql $DATABASE_URL -c 'select structs.GUILD_METADATA_UPDATE('${CRAWL_GUILD_ID}','${CRAWL_GUILD_JSON}');' --no-align -t
+  done
+
+  sleep $CRAWL_SLEEP
+  echo "CRAWLER ($BASHPID): Awaking from slumber"
 done
