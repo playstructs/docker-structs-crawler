@@ -37,7 +37,7 @@ do
 
     # validate the json
     # Run it through jq so garbage falls away
-    CRAWL_GUILD_JSON=$( jq -f crawl_endpoint_data.json.tmp -c . )
+    CRAWL_GUILD_JSON=$( cat crawl_endpoint_data.json.tmp | jq -c .)
     rm crawl_endpoint_data.json.tmp
 
     # Update Guild
