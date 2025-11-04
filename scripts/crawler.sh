@@ -41,6 +41,7 @@ do
     rm crawl_endpoint_data.json.tmp
 
     # Update Guild
+    CRAWL_GUILD_JSON="${CRAWL_GUILD_JSON//\'/\'\'}"
     echo "select structs.GUILD_METADATA_UPDATE('${CRAWL_GUILD_ID}','${CRAWL_GUILD_JSON}');" > crawl_endpoint_query.sql.tmp
     psql $DATABASE_URL -f crawl_endpoint_query.sql.tmp  --no-align -t
     rm crawl_endpoint_query.sql.tmp
