@@ -42,7 +42,12 @@ do
 
     # Update Guild
     CRAWL_GUILD_JSON="${CRAWL_GUILD_JSON//\'/\'\'}"
-    echo "select structs.GUILD_METADATA_UPDATE('${CRAWL_GUILD_ID}','${CRAWL_GUILD_JSON}');" > crawl_endpoint_query.sql.tmp
+    if [ "${CRAWL_GUILD_ID}" = "${GUILD_ID}" ]; then
+      THIS_INFRASTRUCTURE="true"
+    else
+      THIS_INFRASTRUCTURE="false"
+    fi
+    echo "select structs.GUILD_METADATA_UPDATE('${CRAWL_GUILD_ID}','${CRAWL_GUILD_JSON}', ${THIS_INFRASTRUCTURE});" > crawl_endpoint_query.sql.tmp
     psql $DATABASE_URL -f crawl_endpoint_query.sql.tmp  --no-align -t
     rm crawl_endpoint_query.sql.tmp
 
