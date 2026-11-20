@@ -37,7 +37,8 @@ do
 
     # validate the json
     # Run it through jq so garbage falls away
-    CRAWL_GUILD_JSON=$( cat crawl_endpoint_data.json.tmp | jq -c .)
+    # Limit guild tags to their first four characters before import.
+    CRAWL_GUILD_JSON=$( cat crawl_endpoint_data.json.tmp | jq -c 'if (.guild.tag | type) == "string" then .guild.tag |= .[:4] else . end')
     rm crawl_endpoint_data.json.tmp
 
     # Update Guild
