@@ -3,6 +3,28 @@
 
 Most players within the Structs ecosystem will not need to operate the code in this repository.
 
+## Guild webapp
+
+The crawler reads the browser interface from `guild.webapp` in `guild.json`:
+
+```json
+{
+  "guild": {
+    "webapp": "https://guild.example/"
+  }
+}
+```
+
+The crawler passes this document to `structs.guild_metadata_update`, which stores
+`guild.webapp` in `structs.guild_meta.webapp` on insert and update. Values are
+preserved as advertised, including hostnames without a URL scheme. An absent or
+JSON-null webapp clears the column to SQL NULL.
+
+Deploy the structs-pg `guild-meta-webapp-20261123` migration to enable this
+mapping. It marks cached metadata stale so the next crawl populates the new
+column. The crawler checks every two minutes for new or changed endpoints and
+refreshes metadata older than one day to discover edits to the document itself.
+
 ## Structs
 In the distant future the species of the galaxy are embroiled in a race for Alpha Matter, the rare and dangerous substance that fuels galactic civilization. Players take command of Structs, a race of sentient machines, and must forge alliances, conquer enemies and expand their influence to control Alpha Matter and the fate of the galaxy.
 
